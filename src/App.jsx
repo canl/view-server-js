@@ -44,6 +44,8 @@ const App = () => {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
       <Grid
+        showFilterBar={true}
+        filter='LENGTH(/symbol) = 3'
         title='Top 20 Symbols by BID'
         client={client}
         columnDefs={[
@@ -57,6 +59,7 @@ const App = () => {
       />
 
       <Grid
+        filter='LENGTH(/symbol) = 3'
         title='Top 50 Symbols by ASK'
         client={client}
         columnDefs={[
@@ -64,7 +67,7 @@ const App = () => {
           curCol({ headerName: 'Bid', field: 'bid' }),
           curCol({ headerName: 'Ask', field: 'ask', sort: 'asc' })
         ]}
-        topic='invalid_topic'
+        topic='market_data'
         options='oof,conflation=500ms,top_n=50,skip_n=10'
         orderBy='/ask ASC'
       />

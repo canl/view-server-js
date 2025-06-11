@@ -1,7 +1,8 @@
 import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark } from 'ag-grid-community'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Command, Client } from 'amps'
+import FilterBar from './FilterBar'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule])
 
@@ -33,7 +34,7 @@ const processPublish = (message, rowData) => {
   return rows
 }
 
-const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, options }) => {
+const Grid = ({ showFilterBar, filter, title, client, width, height, columnDefs, topic, orderBy, options }) => {
   const [connectionStatus, setConnectionStatus] = useState('Connected')
   const [error, setError] = useState()
 
@@ -65,9 +66,77 @@ const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, option
     }
   }, [client]) // we only need to invoke the hook callback when a new client prop provided (will be called once)
 
+  // new filter state value hook
+  const [filterInput, setFilterInput] = useState(filter || '')
+  
+  const sowAndSubscribe = useCallback(async filter => {
+    if (filter !== undefined) {
+      if (filter !== filterInput) {
+        setFilterInput(filter || '')
+      } else {
+        return
+      }
+    } else {
+      filter = filterInput
+    }
+
+    // clear previous errors, if any
+    if (error) {
+      setError('')
+    }
+
+    // if we had a running subscription already, we need to unsubscribe from it
+    if (subIdRef.current) {
+      client.unsubscribe(subIdRef.current)
+      subIdRef.current = undefined
+
+      // update state
+      setRowData([])
+    }
+
+    // create a command object
+    const command = new Command('sow_and_subscribe')
+    command.topic(topic)
+    command.orderBy(orderBy)
+    command.options(options)
+
+    if (filter) {
+      command.filter(filter)
+    }
+
+    try {
+      // subscribe to the topic data and atomic updates
+      let rows
+      subIdRef.current = await client.execute(command, message => {
+        switch (message.header.command()) {
+          case 'group_begin': // Begin receiving the initial dataset
+            rows = []
+            break
+          case 'sow': // This message is a part of the initial dataset
+            message.data.key = message.header.sowKey()
+            rows.push(message.data)
+            break
+          case 'group_end': // Initial Dataset has been delivered
+            setRowData(rows)
+            break
+          case 'oof': // Out-of-Focus -- a message should no longer be in the grid
+            rows = processOOF(message, rows)
+            setRowData(rows)
+            break
+          default: // Publish -- either a new message or an update
+            rows = processPublish(message, rows)
+            setRowData(rows)
+        }
+      })
+    } catch (err) {
+      setError(`Error: ${err.message}`)
+    }
+  }, [client, error, filterInput, options, orderBy, topic]) // we list dependencies used in the above function
+
   return (
     <div className='ag-container' style={{ height: height ?? 600, width: width ?? 600 }}>
       <div className='grid-header'>{title}</div>
+      {showFilterBar && <FilterBar value={filterInput} onValueChange={sowAndSubscribe} />}
       <AgGridReact
         theme={themeAlpine.withPart(colorSchemeDark)}
         columnDefs={columnDefs}
@@ -80,47 +149,11 @@ const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, option
         animateRows={true}
         // the provided callback is invoked once the grid is initialized
         onGridReady={async ({ api }) => {
-          // this is the place where we issue a "sow_and_subscribe" command
           // resize columns to fit the width of the grid
           api.sizeColumnsToFit()
-
-          // create a command object
-          const command = new Command('sow_and_subscribe')
-          command.topic(topic)
-          command.orderBy(orderBy)
-          command.options(options)
-
-          try {
-            // subscribe to the topic data and atomic updates
-            let rows
-
-            // store the subscription id
-            subIdRef.current = await client.execute(command, message => {
-              switch (message.header.command()) {
-                case 'group_begin': // Begin receiving the initial dataset
-                  rows = []
-                  break
-                case 'sow': // This message is a part of the initial dataset
-                  message.data.key = message.header.sowKey()
-                  rows.push(message.data)
-                  break
-                case 'group_end': // Initial Dataset has been delivered
-                  setRowData(rows)
-                  break
-                case 'oof': // Out-of-Focus -- a message should no longer be in the grid
-                  rows = processOOF(message, rows)
-                  setRowData(rows)
-                  break
-                default: // Publish -- either a new message or an update
-                  rows = processPublish(message, rows)
-                  setRowData(rows)
-              }
-            })
-          } catch (err) {
-            setRowData([])
-            setError(`Error: ${err.message}`)
-            console.error('err: ', err)
-          }
+          // notice that we've moved the subscription code from here
+          // and simply call the newly created function instead
+          sowAndSubscribe()
         }}
       />
       <div className='status-panel'>
