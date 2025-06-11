@@ -1,16 +1,16 @@
-import Grid from './Grid'
+import Grid from './Grid.tsx'
 import './App.css'
 import { useState, useEffect } from 'react'
 import { Client, DefaultServerChooser, DefaultSubscriptionManager } from 'amps'
-import { curCol } from './helpers'
+import { curCol } from './helpers.ts'
 
 // constants
 const HOST = import.meta.env.VITE_AMPS_HOST
 const PORT = import.meta.env.VITE_AMPS_PORT
 
-const App = () => {
+const App: React.FC = () => {
   // the state of the component will be an AMPS Client object
-  const [client, setClient] = useState()
+  const [client, setClient] = useState<Client | undefined>(undefined)
 
   useEffect(() => {
     // create the server chooser
@@ -24,7 +24,7 @@ const App = () => {
 
     // report general errors in the error handler, for example, message parsing error,
     // or an error thrown in the message handler
-    client.errorHandler(err => console.error('Error: ', err))
+    client.errorHandler((err: Error) => console.error('Error: ', err))
 
     // now we can establish connection and update the state
     client.connect().then(() => setClient(client))
@@ -47,6 +47,7 @@ const App = () => {
         showFilterBar={true}
         filter='LENGTH(/symbol) = 3'
         title='Top 20 Symbols by BID'
+        height={1000}
         client={client}
         columnDefs={[
           { headerName: 'Symbol', field: 'symbol' },
@@ -54,7 +55,8 @@ const App = () => {
           curCol({ headerName: 'Ask', field: 'ask' })
         ]}
         topic='market_data'
-        options='oof,conflation=3000ms,top_n=20,skip_n=0'
+        // options='oof,conflation=3000ms,top_n=20,skip_n=0'
+        options='oof,conflation=500ms,top_n=50,skip_n=0'
         orderBy='/bid DESC'
       />
 
@@ -62,6 +64,7 @@ const App = () => {
         filter='LENGTH(/symbol) = 3'
         title='Top 50 Symbols by ASK'
         client={client}
+        height={1000}
         columnDefs={[
           { headerName: 'Symbol', field: 'symbol' },
           curCol({ headerName: 'Bid', field: 'bid' }),
@@ -75,4 +78,4 @@ const App = () => {
   )
 }
 
-export default App
+export default App 

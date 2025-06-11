@@ -1,15 +1,43 @@
 import { AgGridReact } from 'ag-grid-react'
-import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark } from 'ag-grid-community'
+import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark, ColDef, GridApi, GridReadyEvent, ValidationModule, CellStyleModule } from 'ag-grid-community'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Command, Client } from 'amps'
-import FilterBar from './FilterBar'
+import FilterBar from './FilterBar.tsx'
 
-ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule])
+ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule, ValidationModule, CellStyleModule])
 
+interface Message {
+  header: {
+    command: () => string;
+    sowKey: () => string;
+  };
+  data: any;
+}
 
-const matcher = ({ header }) => ({ key }) => key === header.sowKey()
+interface RowData {
+  key: string;
+  symbol: string;
+  bid: number;
+  ask: number;
+  [key: string]: any;
+}
 
-const processOOF = (message, rowData) => {
+interface GridProps {
+  showFilterBar?: boolean;
+  filter?: string;
+  title: string;
+  client: Client;
+  width?: number;
+  height?: number;
+  columnDefs: ColDef[];
+  topic: string;
+  orderBy: string;
+  options: string;
+}
+
+const matcher = ({ header }: Message) => ({ key }: { key: string }) => key === header.sowKey()
+
+const processOOF = (message: Message, rowData: RowData[]): RowData[] => {
   const rowIndex = rowData.findIndex(matcher(message))
 
   if (rowIndex >= 0) {
@@ -20,7 +48,7 @@ const processOOF = (message, rowData) => {
   return rowData
 }
 
-const processPublish = (message, rowData) => {
+const processPublish = (message: Message, rowData: RowData[]): RowData[] => {
   const rowIndex = rowData.findIndex(matcher(message))
   const rows = rowData.slice()
 
@@ -34,19 +62,13 @@ const processPublish = (message, rowData) => {
   return rows
 }
 
-const Grid = ({ showFilterBar, filter, title, client, width, height, columnDefs, topic, orderBy, options }) => {
+const Grid: React.FC<GridProps> = ({ showFilterBar, filter, title, client, width, height, columnDefs, topic, orderBy, options }) => {
   const [connectionStatus, setConnectionStatus] = useState('Connected')
-  const [error, setError] = useState()
-
-
-  // the state of the component is the a list of row objects
-  const [rowData, setRowData] = useState([])
-
-  // create and keep a reference to the subscription id
-  const subIdRef = useRef()
+  const [error, setError] = useState<string>()
+  const [rowData, setRowData] = useState<RowData[]>([])
+  const subIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    // subscribe for the connection events
     const listenerId = client.addConnectionStateListener(state => {
       if (state === Client.ConnectionStateListener.LoggedOn) {
         setConnectionStatus('Connected')
@@ -57,81 +79,72 @@ const Grid = ({ showFilterBar, filter, title, client, width, height, columnDefs,
     })
 
     return () => {
-      // if there's an active subscription at a time of component destruction, remove it
       if (subIdRef.current) {
         client.unsubscribe(subIdRef.current)
       }
-      // remove the connection state listener when the component is destructed
       client.removeConnectionStateListener(listenerId)
     }
-  }, [client]) // we only need to invoke the hook callback when a new client prop provided (will be called once)
+  }, [client])
 
-  // new filter state value hook
   const [filterInput, setFilterInput] = useState(filter || '')
   
-  const sowAndSubscribe = useCallback(async filter => {
-    if (filter !== undefined) {
-      if (filter !== filterInput) {
-        setFilterInput(filter || '')
+  const sowAndSubscribe = useCallback(async (newFilter?: string) => {
+    if (newFilter !== undefined) {
+      if (newFilter !== filterInput) {
+        setFilterInput(newFilter || '')
       } else {
         return
       }
     } else {
-      filter = filterInput
+      newFilter = filterInput
     }
 
-    // clear previous errors, if any
     if (error) {
       setError('')
     }
 
-    // if we had a running subscription already, we need to unsubscribe from it
     if (subIdRef.current) {
       client.unsubscribe(subIdRef.current)
-      subIdRef.current = undefined
-
-      // update state
+      subIdRef.current = null
       setRowData([])
     }
 
-    // create a command object
     const command = new Command('sow_and_subscribe')
     command.topic(topic)
     command.orderBy(orderBy)
     command.options(options)
 
-    if (filter) {
-      command.filter(filter)
+    if (newFilter) {
+      command.filter(newFilter)
     }
 
     try {
-      // subscribe to the topic data and atomic updates
-      let rows
-      subIdRef.current = await client.execute(command, message => {
+      let rows: any[] = []
+      subIdRef.current = await client.execute(command, (message: Message) => {
         switch (message.header.command()) {
-          case 'group_begin': // Begin receiving the initial dataset
+          case 'group_begin':
             rows = []
             break
-          case 'sow': // This message is a part of the initial dataset
+          case 'sow':
             message.data.key = message.header.sowKey()
             rows.push(message.data)
             break
-          case 'group_end': // Initial Dataset has been delivered
+          case 'group_end':
             setRowData(rows)
             break
-          case 'oof': // Out-of-Focus -- a message should no longer be in the grid
+          case 'oof':
             rows = processOOF(message, rows)
             setRowData(rows)
             break
-          default: // Publish -- either a new message or an update
+          default:
             rows = processPublish(message, rows)
             setRowData(rows)
         }
       })
-    } catch (err) {
+    } catch (err: any) {
       setError(`Error: ${err.message}`)
     }
-  }, [client, error, filterInput, options, orderBy, topic]) // we list dependencies used in the above function
+  }, [client, error, filterInput, options, orderBy, topic])
 
   return (
     <div className='ag-container' style={{ height: height ?? 600, width: width ?? 600 }}>
@@ -140,19 +153,12 @@ const Grid = ({ showFilterBar, filter, title, client, width, height, columnDefs,
       <AgGridReact
         theme={themeAlpine.withPart(colorSchemeDark)}
         columnDefs={columnDefs}
-        // we now use state to track row data changes
         rowData={rowData}
-        // unique identification of the row based on the SowKey
         getRowId={({ data: { key } }) => key}
-        // resize columns on grid resize
         onGridSizeChanged={({ api }) => api.sizeColumnsToFit()}
         animateRows={true}
-        // the provided callback is invoked once the grid is initialized
-        onGridReady={async ({ api }) => {
-          // resize columns to fit the width of the grid
+        onGridReady={async ({ api }: GridReadyEvent) => {
           api.sizeColumnsToFit()
-          // notice that we've moved the subscription code from here
-          // and simply call the newly created function instead
           sowAndSubscribe()
         }}
       />
@@ -164,4 +170,4 @@ const Grid = ({ showFilterBar, filter, title, client, width, height, columnDefs,
   )
 }
 
-export default Grid
+export default Grid 

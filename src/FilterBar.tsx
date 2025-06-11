@@ -1,6 +1,11 @@
 import { useState } from 'react'
 
-const FilterBar = ({ value, onValueChange }) => {
+interface FilterBarProps {
+  value: string;
+  onValueChange: (value: string) => void;
+}
+
+const FilterBar: React.FC<FilterBarProps> = ({ value, onValueChange }) => {
   const [inputValue, setInputValue] = useState(value ?? '')
 
   return (
@@ -19,4 +24,4 @@ const FilterBar = ({ value, onValueChange }) => {
   )
 }
 
-export default FilterBar
+export default FilterBar 
