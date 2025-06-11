@@ -22,6 +22,10 @@ const App = () => {
     client.serverChooser(chooser)
     client.subscriptionManager(new DefaultSubscriptionManager())
 
+    // report general errors in the error handler, for example, message parsing error,
+    // or an error thrown in the message handler
+    client.errorHandler(err => console.error('Error: ', err))
+
     // now we can establish connection and update the state
     client.connect().then(() => setClient(client))
 
@@ -60,7 +64,7 @@ const App = () => {
           curCol({ headerName: 'Bid', field: 'bid' }),
           curCol({ headerName: 'Ask', field: 'ask', sort: 'asc' })
         ]}
-        topic='market_data'
+        topic='invalid_topic'
         options='oof,conflation=500ms,top_n=50,skip_n=10'
         orderBy='/ask ASC'
       />

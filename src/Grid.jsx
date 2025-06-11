@@ -1,7 +1,7 @@
 import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark } from 'ag-grid-community'
 import { useState, useEffect, useRef } from 'react'
-import { Command } from 'amps'
+import { Command, Client } from 'amps'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule])
 
@@ -34,6 +34,10 @@ const processPublish = (message, rowData) => {
 }
 
 const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, options }) => {
+  const [connectionStatus, setConnectionStatus] = useState('Connected')
+  const [error, setError] = useState()
+
+
   // the state of the component is the a list of row objects
   const [rowData, setRowData] = useState([])
 
@@ -41,11 +45,23 @@ const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, option
   const subIdRef = useRef()
 
   useEffect(() => {
+    // subscribe for the connection events
+    const listenerId = client.addConnectionStateListener(state => {
+      if (state === Client.ConnectionStateListener.LoggedOn) {
+        setConnectionStatus('Connected')
+      } else if (state === Client.ConnectionStateListener.Disconnected) {
+        setRowData([])
+        setConnectionStatus('Reconnecting...')
+      }
+    })
+
     return () => {
       // if there's an active subscription at a time of component destruction, remove it
       if (subIdRef.current) {
         client.unsubscribe(subIdRef.current)
       }
+      // remove the connection state listener when the component is destructed
+      client.removeConnectionStateListener(listenerId)
     }
   }, [client]) // we only need to invoke the hook callback when a new client prop provided (will be called once)
 
@@ -102,10 +118,15 @@ const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, option
             })
           } catch (err) {
             setRowData([])
+            setError(`Error: ${err.message}`)
             console.error('err: ', err)
           }
         }}
       />
+      <div className='status-panel'>
+        <span style={{ color: connectionStatus === 'Connected' ? 'green' : 'yellow' }}>{connectionStatus}</span>
+        <span style={{ float: 'right', color: 'red' }}>{error}</span>
+      </div>
     </div>
   )
 }

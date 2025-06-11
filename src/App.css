@@ -69,3 +69,17 @@ body {
 .right {
   text-align: right;
 }
+
+.status-panel {
+  height: 32px;
+  line-height: 32px;
+
+  background: #222628;
+  color: #fff;
+  border: 1px solid #68686e;
+  border-top: unset;
+
+  font-weight: bold;
+  text-align: left;
+  padding: 0 8px;
+}
