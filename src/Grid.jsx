@@ -1,5 +1,5 @@
 import { AgGridReact } from 'ag-grid-react'
-import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule } from 'ag-grid-community'
+import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark } from 'ag-grid-community'
 import { useState, useEffect, useRef } from 'react'
 import { Command } from 'amps'
 
@@ -33,7 +33,7 @@ const processPublish = (message, rowData) => {
   return rows
 }
 
-const Grid = ({ client, width, height, columnDefs, topic, orderBy, options }) => {
+const Grid = ({ title, client, width, height, columnDefs, topic, orderBy, options }) => {
   // the state of the component is the a list of row objects
   const [rowData, setRowData] = useState([])
 
@@ -51,8 +51,9 @@ const Grid = ({ client, width, height, columnDefs, topic, orderBy, options }) =>
 
   return (
     <div className='ag-container' style={{ height: height ?? 600, width: width ?? 600 }}>
+      <div className='grid-header'>{title}</div>
       <AgGridReact
-        theme={themeAlpine}
+        theme={themeAlpine.withPart(colorSchemeDark)}
         columnDefs={columnDefs}
         // we now use state to track row data changes
         rowData={rowData}
@@ -60,6 +61,7 @@ const Grid = ({ client, width, height, columnDefs, topic, orderBy, options }) =>
         getRowId={({ data: { key } }) => key}
         // resize columns on grid resize
         onGridSizeChanged={({ api }) => api.sizeColumnsToFit()}
+        animateRows={true}
         // the provided callback is invoked once the grid is initialized
         onGridReady={async ({ api }) => {
           // this is the place where we issue a "sow_and_subscribe" command
@@ -103,7 +105,6 @@ const Grid = ({ client, width, height, columnDefs, topic, orderBy, options }) =>
             console.error('err: ', err)
           }
         }}
-
       />
     </div>
   )

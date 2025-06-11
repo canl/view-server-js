@@ -1,8 +1,8 @@
 const { Client, DefaultServerChooser, MemoryPublishStore } = require('amps')
 
 // constants
-const HOST = import.meta.env.VITE_AMPS_HOST || 'localhost'
-const PORT = import.meta.env.VITE_AMPS_PORT || 8080
+const HOST = "34.68.65.149"
+const PORT = 9008
 const TOPIC = 'market_data'
 const PUBLISH_RATE_PER_SECOND = 2000
 
