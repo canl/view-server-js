@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { Client, DefaultServerChooser, DefaultSubscriptionManager } from 'amps'
 
 // constants
-const HOST = '34.68.65.149'
-const PORT = '9008'
+const HOST = import.meta.env.VITE_AMPS_HOST
+const PORT = import.meta.env.VITE_AMPS_PORT
 
 const App = () => {
   // the state of the component will be an AMPS Client object
@@ -36,7 +36,33 @@ const App = () => {
   }
 
   // Contents to render
-  return (<Grid client={client} />)
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
+      <Grid
+        client={client}
+        columnDefs={[
+          { headerName: 'Symbol', field: 'symbol' },
+          { headerName: 'Bid', field: 'bid', sort: 'desc' },
+          { headerName: 'Ask', field: 'ask' }
+        ]}
+        topic='market_data'
+        options='oof,conflation=3000ms,top_n=20,skip_n=0'
+        orderBy='/bid DESC'
+      />
+
+      <Grid
+        client={client}
+        columnDefs={[
+          { headerName: 'Symbol', field: 'symbol' },
+          { headerName: 'Bid', field: 'bid' },
+          { headerName: 'Ask', field: 'ask', sort: 'asc' }
+        ]}
+        topic='market_data'
+        options='oof,conflation=500ms,top_n=50,skip_n=10'
+        orderBy='/ask ASC'
+      />
+    </div>
+  )
 }
 
 export default App

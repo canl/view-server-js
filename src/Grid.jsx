@@ -5,17 +5,7 @@ import { Command } from 'amps'
 
 ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule])
 
-const columnDefs = [
-  { headerName: 'Symbol', field: 'symbol' },
-  { headerName: 'Bid', field: 'bid', sort: 'desc' },
-  { headerName: 'Ask', field: 'ask' }
-]
 
-const rowData = [
-  { make: 'Toyota', model: 'Celica', price: 35000 },
-  { make: 'Ford', model: 'Mondeo', price: 32000 },
-  { make: 'Porsche', model: 'Boxter', price: 72000 }
-]
 const matcher = ({ header }) => ({ key }) => key === header.sowKey()
 
 const processOOF = (message, rowData) => {
@@ -43,7 +33,7 @@ const processPublish = (message, rowData) => {
   return rows
 }
 
-const Grid = ({ client }) => {
+const Grid = ({ client, width, height, columnDefs, topic, orderBy, options }) => {
   // the state of the component is the a list of row objects
   const [rowData, setRowData] = useState([])
 
@@ -60,7 +50,7 @@ const Grid = ({ client }) => {
   }, [client]) // we only need to invoke the hook callback when a new client prop provided (will be called once)
 
   return (
-    <div className='ag-container' style={{ height: 600, width: 600 }}>
+    <div className='ag-container' style={{ height: height ?? 600, width: width ?? 600 }}>
       <AgGridReact
         theme={themeAlpine}
         columnDefs={columnDefs}
@@ -78,9 +68,9 @@ const Grid = ({ client }) => {
 
           // create a command object
           const command = new Command('sow_and_subscribe')
-          command.topic('market_data')
-          command.orderBy('/bid DESC')
-          command.options('oof,conflation=3000ms,top_n=20,skip_n=0')
+          command.topic(topic)
+          command.orderBy(orderBy)
+          command.options(options)
 
           try {
             // subscribe to the topic data and atomic updates
