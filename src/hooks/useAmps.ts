@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Client, DefaultServerChooser, DefaultSubscriptionManager } from 'amps'
+import { CONNECTION_STATUS, ERROR_MESSAGES } from '../constants'
 
 interface UseAmpsProps {
   host: string;
@@ -7,9 +8,11 @@ interface UseAmpsProps {
   clientName?: string;
 }
 
+type ConnectionStatus = typeof CONNECTION_STATUS[keyof typeof CONNECTION_STATUS]
+
 export const useAmps = ({ host, port, clientName = 'view-server' }: UseAmpsProps) => {
   const [client, setClient] = useState<Client | undefined>(undefined)
-  const [connectionStatus, setConnectionStatus] = useState('Connecting...')
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(CONNECTION_STATUS.CONNECTING)
   const [error, setError] = useState<string>()
 
   useEffect(() => {
@@ -31,10 +34,10 @@ export const useAmps = ({ host, port, clientName = 'view-server' }: UseAmpsProps
     // subscribe for the connection events
     const listenerId = ampsClient.addConnectionStateListener(state => {
       if (state === Client.ConnectionStateListener.LoggedOn) {
-        setConnectionStatus('Connected')
+        setConnectionStatus(CONNECTION_STATUS.CONNECTED)
         setError(undefined)
       } else if (state === Client.ConnectionStateListener.Disconnected) {
-        setConnectionStatus('Reconnecting...')
+        setConnectionStatus(CONNECTION_STATUS.RECONNECTING)
       }
     })
 
