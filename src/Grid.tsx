@@ -1,12 +1,12 @@
 import { AgGridReact } from 'ag-grid-react'
-import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark, ColDef, GridApi, GridReadyEvent, ValidationModule, CellStyleModule } from 'ag-grid-community'
+import { ModuleRegistry, ClientSideRowModelModule, themeAlpine, ColumnAutoSizeModule, colorSchemeDark, ColDef, GridApi, GridReadyEvent, ValidationModule, CellStyleModule, TextFilterModule } from 'ag-grid-community'
 import { useEffect } from 'react'
 import { Client } from 'amps'
 import FilterBar from './FilterBar.tsx'
 import { useGridData } from './hooks/useGridData'
 import { CONNECTION_STATUS, DEFAULTS } from './constants'
 
-ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule, ValidationModule, CellStyleModule])
+ModuleRegistry.registerModules([ClientSideRowModelModule, ColumnAutoSizeModule, ValidationModule, CellStyleModule, TextFilterModule])
 
 interface GridProps {
   showFilterBar?: boolean;
@@ -23,16 +23,16 @@ interface GridProps {
   error?: string;
 }
 
-const Grid: React.FC<GridProps> = ({ 
-  showFilterBar, 
-  filter, 
-  title, 
-  client, 
-  width, 
-  height, 
-  columnDefs, 
-  topic, 
-  orderBy, 
+const Grid: React.FC<GridProps> = ({
+  showFilterBar,
+  filter,
+  title,
+  client,
+  width,
+  height,
+  columnDefs,
+  topic,
+  orderBy,
   options,
   connectionStatus = DEFAULTS.CONNECTION_STATUS,
   error

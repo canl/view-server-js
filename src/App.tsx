@@ -2,6 +2,7 @@ import Grid from './Grid.tsx'
 import './App.css'
 import { useAmps } from './hooks/useAmps'
 import { curCol } from './helpers.ts'
+import GridTest from './GridTest.tsx'
 
 // constants
 const HOST = import.meta.env.VITE_AMPS_HOST
@@ -24,7 +25,7 @@ const App: React.FC = () => {
         title='Top 20 Symbols by BID'
         client={client}
         columnDefs={[
-          { headerName: 'Symbol', field: 'symbol' },
+          { headerName: 'Symbol', field: 'symbol', filter: "agTextColumnFilter" },
           curCol({ headerName: 'Bid', field: 'bid', sort: 'desc' }),
           curCol({ headerName: 'Ask', field: 'ask' })
         ]}
@@ -40,7 +41,7 @@ const App: React.FC = () => {
         title='Top 50 Symbols by ASK'
         client={client}
         columnDefs={[
-          { headerName: 'Symbol', field: 'symbol' },
+          { headerName: 'Symbol', field: 'symbol', filter: "agSetColumnFilter" },
           curCol({ headerName: 'Bid', field: 'bid' }),
           curCol({ headerName: 'Ask', field: 'ask', sort: 'asc' })
         ]}

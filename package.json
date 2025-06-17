@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "ag-grid-community": "^33.3.2",
+    "ag-grid-enterprise": "^33.3.2",
     "ag-grid-react": "^33.3.2",
     "amps": "5.3.4-0.378635.60b2fcc",
     "react": "^19.1.0",
